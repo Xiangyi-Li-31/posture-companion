@@ -1,0 +1,92 @@
+name: Build Windows release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Create environment and install dependencies
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --upgrade pip
+          .\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-build.txt pytest
+          .\.venv\Scripts\python.exe scripts\download_model.py
+
+      - name: Test
+        shell: pwsh
+        run: |
+          $env:PYTHONPATH = "$PWD\src"
+          .\.venv\Scripts\python.exe -m pytest tests -q -p no:cacheprovider
+
+      - name: Build
+        shell: pwsh
+        run: .\build.ps1
+
+      - name: Verify the Windows executable
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path "dist\PostureCompanion\PostureCompanion.exe").Path
+          $check = New-Item -ItemType Directory -Path (Join-Path $env:RUNNER_TEMP "posture-smoke")
+          $env:LOCALAPPDATA = $check.FullName
+          $proc = Start-Process -FilePath $exe -ArgumentList "--smoke-test" -WorkingDirectory $check.FullName -WindowStyle Hidden -PassThru
+          $finished = $proc.WaitForExit(180000)
+          if (-not $finished) { Stop-Process -Id $proc.Id }
+          Get-Content (Join-Path $check.FullName "smoke-test.log") -ErrorAction SilentlyContinue
+          Get-Content (Join-Path $check.FullName "PostureCompanion\fatal.log") -ErrorAction SilentlyContinue
+          if (-not $finished -or $proc.ExitCode -ne 0) { throw "Windows executable smoke test failed" }
+          $result = Get-Content (Join-Path $check.FullName "smoke-test.log") -Tail 1
+          if ($result -ne "smoke success") { throw "Windows executable smoke test incomplete" }
+
+      - name: Package
+        id: package
+        shell: pwsh
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          $version = if ($env:REF_TYPE -eq "tag") { $env:REF_NAME } else { "dev-$env:RUN_NUMBER" }
+          if ($version -notmatch '^(v\d+\.\d+\.\d+|dev-\d+)$') { throw "Unsupported release version" }
+          $archive = "PostureCompanion-$version-Windows-x64.zip"
+          Copy-Item -LiteralPath "docs\windows-quick-start.txt","LICENSE","THIRD_PARTY.md","PRIVACY.md" -Destination "dist\PostureCompanion"
+          Compress-Archive -LiteralPath "dist\PostureCompanion" -DestinationPath $archive -CompressionLevel Optimal
+          $hash = (Get-FileHash $archive -Algorithm SHA256).Hash
+          "$hash  $archive" | Set-Content -Encoding ascii SHA256SUMS.txt
+          "archive=$archive" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: posture-companion-windows
+          path: |
+            ${{ steps.package.outputs.archive }}
+            SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_ARCHIVE: ${{ steps.package.outputs.archive }}
+        run: |
+          gh release create $env:RELEASE_TAG `
+            $env:RELEASE_ARCHIVE `
+            "SHA256SUMS.txt" `
+            --verify-tag `
+            --title "坐直小伙伴 $env:RELEASE_TAG" `
+            --generate-notes

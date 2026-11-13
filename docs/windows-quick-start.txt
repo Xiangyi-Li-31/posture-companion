@@ -1,0 +1,9 @@
+坐直小伙伴 0.5.0
+
+1. 解压整个 ZIP，保留 PostureCompanion.exe 和同目录下的 _internal。
+2. 双击 PostureCompanion.exe，首次使用时进入「坐直监测」校准。
+3. 「设置」可预览和切换猫猫、狗狗。保存后桌面宠物会更新。
+4. 拖动宠物身体即可移动。主窗口和宠物旁都可暂停或继续摄像头。
+5. 退出程序请在系统托盘菜单中选择「退出」。
+
+摄像头画面在本机处理。程序数据保存在 %LOCALAPPDATA%\PostureCompanion。

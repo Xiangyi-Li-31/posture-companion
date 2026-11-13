@@ -1,0 +1,46 @@
+name: Bug 报告
+description: 报告可以稳定复现的问题
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: 请勿上传包含真实人物、私人桌面或敏感路径的摄像头截图和日志。
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      placeholder: 例如 v0.4.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: 运行方式
+      options:
+        - GitHub Release 压缩包
+        - 从源码运行
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 实际发生了什么？你原本期望什么？
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开……
+        2. 点击……
+        3. 看到……
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境
+      description: Windows 版本、摄像头类型，以及是否移动过摄像头或重新校准。

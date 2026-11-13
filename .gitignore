@@ -1,0 +1,38 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.test-tmp/
+
+# Application data and private local state
+data/
+*.sqlite3
+settings.json
+calibration.json
+fatal.log
+*.log
+
+# Downloaded model (fetched by setup.ps1 / CI)
+models/*.task
+models/*.download
+
+# Build output
+build/
+build-*/
+dist/
+release/
+release-*/
+*.zip
+*.exe
+*.pkg
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
